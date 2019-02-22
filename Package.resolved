@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "BinaryCodable",
+        "repositoryURL": "https://github.com/jverkoey/BinaryCodable",
+        "state": {
+          "branch": null,
+          "revision": "3a38a02b13b0cb23c9995086a076e46fca91dd4f",
+          "version": "0.1.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
