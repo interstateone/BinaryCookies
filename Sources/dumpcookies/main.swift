@@ -14,7 +14,12 @@ guard var path = CommandLine.arguments[safe: 1] else {
     exit(EXIT_FAILURE)
 }
 
-let url = URL(fileURLWithPath: path, relativeTo: nil)
-let data = try Data(contentsOf: url)
-let cookies = try BinaryDataDecoder().decode(BinaryCookies.self, from: data)
-dump(cookies)
+do {
+    let url = URL(fileURLWithPath: path, relativeTo: nil)
+    let data = try Data(contentsOf: url)
+    let cookies = try BinaryDataDecoder().decode(BinaryCookies.self, from: data)
+    dump(cookies)
+}
+catch {
+    print(String(describing: error))
+}
