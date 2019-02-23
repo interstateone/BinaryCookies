@@ -3,6 +3,7 @@ import BinaryCodable
 
 public class BinaryCookies: BinaryDecodable {
     public var pages: [Page]
+    public var metadata: Any
 
     public required init(from decoder: BinaryDecoder) throws {
         var container = decoder.sequentialContainer(maxLength: nil)
@@ -23,9 +24,26 @@ public class BinaryCookies: BinaryDecodable {
             pages.append(page)
         }
         self.pages = pages
+
+        // Checksum
+        let _ = try container.decode(length: 4)
+
+        let footer = try container.decode(Int64.self).bigEndian
+        guard footer == BinaryCookies.footer else { throw BinaryDecodingError.dataCorrupted(.init(debugDescription: "Invalid cookies footer")) }
+
+        // This feels silly but I don't think there's a better way to do it with BinaryCodable yet?
+        var plistData = Data()
+        while !container.isAtEnd {
+            if let byte = try? container.decode(length: 1) {
+                plistData.append(byte)
+            }
+        }
+
+        metadata = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
     }
 
     private static let magic = Data("cook".utf8)
+    private static let footer = 0x071720050000004b
 }
 
 public class Page: BinaryDecodable {
