@@ -82,6 +82,7 @@ public class Page: BinaryDecodable {
 }
 
 public class Cookie: BinaryDecodable {
+    public var version: Int32
     public var url: String!
     public var name: String!
     public var path: String!
@@ -103,7 +104,7 @@ public class Cookie: BinaryDecodable {
 
         let size = try container.decode(Int32.self)
 
-        let _ = try container.decode(length: 4)
+        version = try container.decode(Int32.self)
 
         let flags = try container.decode(Flags.self)
         isSecure = flags.contains(.isSecure)
