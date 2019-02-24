@@ -119,10 +119,10 @@ public class Cookie: BinaryDecodable {
         let footer = try container.decode(Int64.self)
         guard footer == Cookie.footer else { throw BinaryDecodingError.dataCorrupted(.init(debugDescription: "Invalid cookie footer")) }
 
-        let expiration = try container.decode(Int64.self)
-        self.expiration = Date(timeIntervalSinceReferenceDate: TimeInterval(expiration))
-        let creation = try container.decode(Int64.self)
-        self.creation = Date(timeIntervalSinceReferenceDate: TimeInterval(creation))
+        let expiration = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
+        self.expiration = Date(timeIntervalSinceReferenceDate: expiration)
+        let creation = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
+        self.creation = Date(timeIntervalSinceReferenceDate: creation)
 
         // url, name, path, and value aren't in a known order, and because
         // BinaryCodable can't seek to an offset, do a little math to figure out
