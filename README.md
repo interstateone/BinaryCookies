@@ -16,5 +16,6 @@ Install `dumpcookies` with `brew install interstateone/formulae/dump-cookies` or
 Some additional information not found elsewhere:
 
 - After the 32-bit value offset in each cookie is a 32-bit comment offset. Most cookies don't have a comment and so this is 0x00000000. The comment itself comes _before_ the URL, so it has the lowest offset value despite the offset being listed last. I haven't seen any cookies with a comment URL yet, but the 32-bits after the comment offset are probably the offset of the comment URL.
+- The 32 bits after the flags are 0x01000000 (little endian 1) if a port is specified, otherwise they're 0x00000000. The port value will be 2 bytes following the creation date.
 - The last cookie is followed by a 32-bit checksum in big endian format. This is calculated by adding up every 4th byte in each page.
 - Following the checksum is the constant value 0x071720050000004b, then binary plist data which holds an NSHTTPCookieAcceptPolicy value.

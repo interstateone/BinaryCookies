@@ -141,6 +141,7 @@ public class Page: BinaryCodable {
 public class Cookie: BinaryCodable {
     public var version: Int32
     public var url: String!
+    public var port: Int16?
     public var name: String!
     public var path: String!
     public var value: String!
@@ -168,7 +169,7 @@ public class Cookie: BinaryCodable {
         let size = try container.decode(Int32.self)
         version = try container.decode(Int32.self)
         flags = try container.decode(Flags.self)
-        let _ = try container.decode(length: 4)
+        let hasPort = try container.decode(Int32.self)
 
         let urlOffset = try container.decode(Int32.self)
         let nameOffset = try container.decode(Int32.self)
@@ -183,6 +184,10 @@ public class Cookie: BinaryCodable {
         self.expiration = Date(timeIntervalSinceReferenceDate: expiration)
         let creation = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
         self.creation = Date(timeIntervalSinceReferenceDate: creation)
+
+        if hasPort > 0 {
+            port = try container.decode(Int16.self)
+        }
 
         // url, name, path, and value aren't in a known order, and because
         // BinaryCodable can't seek to an offset, do a little math to figure out
@@ -220,9 +225,14 @@ public class Cookie: BinaryCodable {
         try container.encode(totalByteCount)
         try container.encode(version)
         try container.encode(flags)
-        try container.encode(Int32(0x00000000))
+        if port != nil {
+            try container.encode(Int32(1))
+        }
+        else {
+            try container.encode(Int32(0))
+        }
 
-        let commentOffset = fixedByteSize
+        let commentOffset = fixedByteSize + (port != nil ? 2 : 0)
         let urlOffset = commentOffset + Int32(comment?.utf8.count ?? 0)
         try container.encode(urlOffset)
         let nameOffset = urlOffset + Int32(url.utf8.count)
@@ -245,6 +255,9 @@ public class Cookie: BinaryCodable {
         let creation = withUnsafeBytes(of: self.creation.timeIntervalSinceReferenceDate) { Data($0) }
         try container.encode(sequence: creation)
 
+        if let port = port {
+            try container.encode(port)
+        }
         if let comment = comment {
             try container.encode(comment, encoding: .utf8, terminator: nil)
         }
@@ -257,7 +270,13 @@ public class Cookie: BinaryCodable {
     private let fixedByteSize: Int32 = 56
 
     var totalByteCount: Int32 {
-        return fixedByteSize + Int32(comment?.utf8.count ?? 0) + Int32(url.utf8.count) + Int32(name.utf8.count) + Int32(path.utf8.count) + Int32(value.utf8.count)
+        return fixedByteSize + 
+               (port != nil ? 2 : 0) +
+               Int32(comment?.utf8.count ?? 0) +
+               Int32(url.utf8.count) +
+               Int32(name.utf8.count) +
+               Int32(path.utf8.count) +
+               Int32(value.utf8.count)
     }
 
     private static let footer: Int32 = 0x00000000
