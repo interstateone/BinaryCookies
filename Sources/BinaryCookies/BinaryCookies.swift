@@ -146,6 +146,7 @@ public class Cookie: BinaryCodable {
     public var path: String!
     public var value: String!
     public var comment: String?
+    public var commentURL: String?
     public let flags: Flags
     public let creation: Date
     public let expiration: Date
@@ -176,9 +177,7 @@ public class Cookie: BinaryCodable {
         let pathOffset = try container.decode(Int32.self)
         let valueOffset = try container.decode(Int32.self)
         let commentOffset = try container.decode(Int32.self)
-
-        let footer = try container.decode(Int32.self)
-        guard footer == Cookie.footer else { throw BinaryDecodingError.dataCorrupted(.init(debugDescription: "Invalid cookie footer")) }
+        let commentURLOffset = try container.decode(Int32.self)
 
         let expiration = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
         self.expiration = Date(timeIntervalSinceReferenceDate: expiration)
@@ -192,7 +191,7 @@ public class Cookie: BinaryCodable {
         // url, name, path, and value aren't in a known order, and because
         // BinaryCodable can't seek to an offset, do a little math to figure out
         // the order and trust that they aren't padded.
-        let offsets: [Int32] = [urlOffset, nameOffset, pathOffset, valueOffset, commentOffset].sorted()
+        let offsets: [Int32] = [urlOffset, nameOffset, pathOffset, valueOffset, commentOffset, commentURLOffset].sorted()
         for (offset, next) in zip(offsets, offsets.dropFirst() + [size]) {
             let length = Int(next - offset)
 
@@ -216,6 +215,10 @@ public class Cookie: BinaryCodable {
                 let commentData = try container.decode(length: length)
                 comment = String(data: commentData, encoding: .utf8)!
             }
+            else if offset == commentURLOffset, offset > 0 {
+                let commentURLData = try container.decode(length: length)
+                commentURL = String(data: commentURLData, encoding: .utf8)!
+            }
         }
     }
 
@@ -233,7 +236,8 @@ public class Cookie: BinaryCodable {
         }
 
         let commentOffset = fixedByteSize + (port != nil ? 2 : 0)
-        let urlOffset = commentOffset + Int32(comment?.utf8.count ?? 0)
+        let commentURLOffset = commentOffset + Int32(comment?.utf8.count ?? 0)
+        let urlOffset = commentURLOffset + Int32(commentURL?.utf8.count ?? 0)
         try container.encode(urlOffset)
         let nameOffset = urlOffset + Int32(url.utf8.count)
         try container.encode(nameOffset)
@@ -247,8 +251,12 @@ public class Cookie: BinaryCodable {
         else {
             try container.encode(Int32(0))
         }
-
-        try container.encode(Cookie.footer)
+        if commentURL != nil {
+            try container.encode(commentURLOffset)
+        }
+        else {
+            try container.encode(Int32(0))
+        }
 
         let expiration = withUnsafeBytes(of: self.expiration.timeIntervalSinceReferenceDate) { Data($0) }
         try container.encode(sequence: expiration)
@@ -260,6 +268,9 @@ public class Cookie: BinaryCodable {
         }
         if let comment = comment {
             try container.encode(comment, encoding: .utf8, terminator: nil)
+        }
+        if let commentURL = commentURL {
+            try container.encode(commentURL, encoding: .utf8, terminator: nil)
         }
         try container.encode(url, encoding: .utf8, terminator: nil)
         try container.encode(name, encoding: .utf8, terminator: nil)
@@ -273,11 +284,10 @@ public class Cookie: BinaryCodable {
         return fixedByteSize + 
                (port != nil ? 2 : 0) +
                Int32(comment?.utf8.count ?? 0) +
+               Int32(commentURL?.utf8.count ?? 0) +
                Int32(url.utf8.count) +
                Int32(name.utf8.count) +
                Int32(path.utf8.count) +
                Int32(value.utf8.count)
     }
-
-    private static let footer: Int32 = 0x00000000
 }
