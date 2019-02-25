@@ -8,6 +8,8 @@ Includes the BinaryCookies library and the `dumpcookies` executable.
 
 Install `dumpcookies` with `brew install interstateone/formulae/dump-cookies` or build from source.
 
+I've tested the BinaryCookies library with real-world .binarycookies files and generated files using the HTTPCookieStorage APIs. It's able to decode and re-encode these files with full fidelity, although there are currently two flags with unknown meanings.
+
 ## Reference
 
 - http://www.securitylearn.net/2012/10/27/cookies-binarycookies-reader/
