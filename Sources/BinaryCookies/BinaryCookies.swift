@@ -6,7 +6,7 @@ public class BinaryCookies: BinaryCodable {
     public var metadata: Any
 
     public required init(from decoder: BinaryDecoder) throws {
-        var container = decoder.sequentialContainer(maxLength: nil)
+        var container = decoder.container(maxLength: nil)
 
         let magic = try container.decode(length: 4)
         guard magic == BinaryCookies.magic else { throw BinaryDecodingError.dataCorrupted(.init(debugDescription: "Missing magic value")) }
@@ -43,7 +43,7 @@ public class BinaryCookies: BinaryCodable {
     }
 
     public func encode(to encoder: BinaryEncoder) throws {
-        var container = encoder.sequentialContainer()
+        var container = encoder.container()
 
         try container.encode(sequence: BinaryCookies.magic)
         try container.encode(Int32(pages.count).bigEndian)
@@ -51,9 +51,7 @@ public class BinaryCookies: BinaryCodable {
             try container.encode(Int32(page.totalByteCount).bigEndian)
         }
 
-        for page in pages {
-            try container.encode(page)
-        }
+        try container.encode(pages)
 
         let checksum: Int32 = try pages.reduce(0) { try $0 + $1.checksum() }
         try container.encode(checksum.bigEndian)
@@ -72,7 +70,7 @@ public class Page: BinaryCodable {
     public var cookies: [Cookie]
 
     public required init(from decoder: BinaryDecoder) throws {
-        var container = decoder.sequentialContainer(maxLength: nil)
+        var container = decoder.container(maxLength: nil)
 
         let header = try container.decode(Int32.self).bigEndian
         guard header == Page.header else { throw BinaryDecodingError.dataCorrupted(.init(debugDescription: "Invalid page header")) }
@@ -100,7 +98,7 @@ public class Page: BinaryCodable {
     }
 
     public func encode(to encoder: BinaryEncoder) throws {
-        var container = encoder.sequentialContainer()
+        var container = encoder.container()
 
         try container.encode(Page.header.bigEndian)
         try container.encode(Int32(cookies.count))
@@ -111,10 +109,7 @@ public class Page: BinaryCodable {
         }
 
         try container.encode(Page.footer)
-
-        for cookie in cookies {
-            try container.encode(cookie)
-        }
+        try container.encode(cookies)
     }
 
     private var cookiesByteOffset: Int32 {
@@ -165,7 +160,7 @@ public class Cookie: BinaryCodable {
     }
 
     public required init(from decoder: BinaryDecoder) throws {
-        var container = decoder.sequentialContainer(maxLength: nil)
+        var container = decoder.container(maxLength: nil)
 
         let size = try container.decode(Int32.self)
         version = try container.decode(Int32.self)
@@ -179,9 +174,9 @@ public class Cookie: BinaryCodable {
         let commentOffset = try container.decode(Int32.self)
         let commentURLOffset = try container.decode(Int32.self)
 
-        let expiration = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
+        let expiration = try container.decode(TimeInterval.self)
         self.expiration = Date(timeIntervalSinceReferenceDate: expiration)
-        let creation = try container.decode(length: 8).withUnsafeBytes { $0.pointee as TimeInterval }
+        let creation = try container.decode(TimeInterval.self)
         self.creation = Date(timeIntervalSinceReferenceDate: creation)
 
         if hasPort > 0 {
@@ -223,7 +218,7 @@ public class Cookie: BinaryCodable {
     }
 
     public func encode(to encoder: BinaryEncoder) throws {
-        var container = encoder.sequentialContainer()
+        var container = encoder.container()
 
         try container.encode(totalByteCount)
         try container.encode(version)
@@ -258,10 +253,8 @@ public class Cookie: BinaryCodable {
             try container.encode(Int32(0))
         }
 
-        let expiration = withUnsafeBytes(of: self.expiration.timeIntervalSinceReferenceDate) { Data($0) }
-        try container.encode(sequence: expiration)
-        let creation = withUnsafeBytes(of: self.creation.timeIntervalSinceReferenceDate) { Data($0) }
-        try container.encode(sequence: creation)
+        try container.encode(expiration.timeIntervalSinceReferenceDate)
+        try container.encode(creation.timeIntervalSinceReferenceDate)
 
         if let port = port {
             try container.encode(port)

@@ -8,7 +8,7 @@ let package = Package(
         .executable(name: "dumpcookies", targets: ["dumpcookies"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/jverkoey/BinaryCodable", .upToNextMinor(from: "0.1.0")),
+        .package(url: "https://github.com/jverkoey/BinaryCodable", .upToNextMinor(from: "0.2.0")),
     ],
     targets: [
         .target(name: "BinaryCookies", dependencies: ["BinaryCodable"]),
